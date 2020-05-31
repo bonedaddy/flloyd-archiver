@@ -6,7 +6,9 @@ import (
 	"os"
 	"time"
 
+	"go.bobheadxi.dev/zapx/zapx"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
 	ldb "github.com/RTradeLtd/go-datastores/leveldb"
 	ipfsapi "github.com/RTradeLtd/go-ipfs-api/v3"
@@ -35,11 +37,19 @@ func main() {
 			Name:  "leveldb.path",
 			Value: "archiver-store",
 		},
+		&cli.StringFlag{
+			Name:  "log.file",
+			Value: "archiver.log",
+		},
 	}
 	app.Commands = cli.Commands{
 		&cli.Command{
 			Name: "run",
 			Action: func(c *cli.Context) error {
+				logger, err := zapx.New(c.String("log.file"), false)
+				if err != nil {
+					return err
+				}
 				shell := ipfsapi.NewShell(c.String("ipfs.api"))
 				router := chi.NewRouter()
 				ds, err := ldb.NewDatastore(c.String("leveldb.path"), nil)
@@ -64,7 +74,11 @@ func main() {
 						w.Write([]byte(err.Error()))
 						return
 					}
-					ds.Put(datastore.NewKey(header.Filename+time.Now().String()+fmt.Sprint(count.Inc())), []byte(hash))
+					num := count.Inc()
+					name := fmt.Sprintf("%s-%v-%v", header.Filename, time.Now().UnixNano(), num)
+					logger.Info("new upload detected", zap.String("file.name", name), zap.String("file.hash", hash), zap.Int64("number", num))
+					ds.Put(datastore.NewKey(name), []byte(hash))
+					ds.Put(datastore.NewKey(hash+"-"+fmt.Sprint(num)), []byte(name))
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(hash))
 				})

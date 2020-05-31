@@ -13,7 +13,9 @@ require (
 	github.com/multiformats/go-multiaddr-net v0.1.5 // indirect
 	github.com/multiformats/go-multibase v0.0.2 // indirect
 	github.com/urfave/cli/v2 v2.2.0
+	go.bobheadxi.dev/zapx/zapx v0.6.8
 	go.uber.org/atomic v1.6.0
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
