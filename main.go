@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"time"
@@ -40,6 +44,10 @@ func main() {
 		&cli.StringFlag{
 			Name:  "log.file",
 			Value: "archiver.log",
+		},
+		&cli.StringFlag{
+			Name:  "file",
+			Usage: "file to upload",
 		},
 	}
 	app.Commands = cli.Commands{
@@ -87,6 +95,52 @@ func main() {
 					Addr:    c.String("listen.address"),
 				}
 				return srv.ListenAndServe()
+			},
+		},
+		&cli.Command{
+			Name: "upload",
+			Action: func(c *cli.Context) error {
+				fh, err := os.Open(c.String("file"))
+				if err != nil {
+					return err
+				}
+				defer fh.Close()
+				bodyBuf := &bytes.Buffer{}
+				bodyWriter := multipart.NewWriter(bodyBuf)
+				fileWriter, err := bodyWriter.CreateFormFile("data", c.String("file"))
+				if err != nil {
+					return err
+				}
+				if _, err := io.Copy(fileWriter, fh); err != nil {
+					return err
+				}
+				if err := bodyWriter.Close(); err != nil {
+					return err
+				}
+				req, err := http.NewRequest("POST", c.String("endpoint"), bodyBuf)
+				if err != nil {
+					return err
+				}
+				req.Header.Add("Content-Type", bodyWriter.FormDataContentType())
+				hc := &http.Client{}
+				resp, err := hc.Do(req)
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+				data, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(data))
+				return nil
+			},
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "endpoint",
+					Usage: "endpoint to upload to",
+					Value: "http://dev.api.ipfs.temporal.cloud:5002",
+				},
 			},
 		},
 	}
