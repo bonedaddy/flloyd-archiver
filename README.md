@@ -1,6 +1,6 @@
 # flloyd-archiver
 
-CLI tool that stores supplied data on IPFS, intended for storing media related to the protests in the states.
+CLI tool that stores supplied data on IPFS, intended for storing media related to the protests in the states, although can be used as a general purpose IPFS uploader script.
 
 # archive requests
 
