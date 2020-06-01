@@ -5,3 +5,7 @@ CLI tool that stores supplied data on IPFS, intended for storing media related t
 # archive requests
 
 if you have data you wanted archived as part of these protests [comment on this github issue](https://github.com/bonedaddy/flloyd-archiver/issues/2)
+
+# archived data
+
+For a current list of all archived medium [see this github issue](https://github.com/bonedaddy/flloyd-archiver/issues/1)
