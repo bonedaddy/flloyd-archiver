@@ -63,6 +63,7 @@ func (d *Downloader) Run(timeout time.Duration) error {
 	*/
 	i := 0
 	for {
+		// read the next record
 		record, err := reader.Read()
 		if err != nil && err != io.EOF {
 			return err
@@ -75,34 +76,39 @@ func (d *Downloader) Run(timeout time.Duration) error {
 			i++
 			continue
 		}
-		// this row contains no video
+		// this row contains no video(s)
+		// as it has less than 7 elements, and the 7th element is the start of the video links
 		if len(record) < 7 {
 			continue
 		}
+		// submit to the worker pool, allowing concurrently downloading multiple videos
 		d.wp.Submit(func() {
 			max := len(record) - 1
 			for i := 6; i < max; i++ {
-				// no data in row so skip
+				// this column is empty, and has no data
 				if record[i] == "" {
 					continue
 				}
-				d.logger.Info("downloading video", zap.String("video", record[3]), zap.String("link", record[i]))
+				d.logger.Info("downloading video", zap.String("name", record[3]), zap.String("url", record[i]))
 				download := func() {
 					var errbuf bytes.Buffer
 					// use an atomically increasing counter to prevent any possible chacne of filename conflics when running many concurrent downloaders
-					cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s-"+fmt.Sprint(d.count.Inc()), record[i])
+					//	cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(id).%(ext)s.%(id)s-"+fmt.Sprint(d.count.Inc()), record[i])
+					cmd := exec.Command("youtube-dl", "-o", d.getName(), record[i])
+					// enables capturing the stderr output for easier debugging
 					cmd.Stderr = &errbuf
 					// if this fails, then it means youtube-dl wasn't able to process the video
 					if err := cmd.Start(); err != nil {
-						d.logger.Error("failed to start command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
+						d.logger.Error("failed to start command", zap.Error(err), zap.String("name", record[3]), zap.String("url", record[i]))
 						return
 					}
+					// this prevents a stalled download, or transient network issues from stalling the entire download process
 					done := make(chan error)
 					go func() { done <- cmd.Wait() }()
 					select {
 					case err := <-done:
 						if err != nil {
-							d.logger.Error("failed to run command", zap.Error(err), zap.String("command.error", errbuf.String()), zap.String("video", record[3]), zap.String("link", record[i]))
+							d.logger.Error("failed to run command", zap.Error(err), zap.String("command.error", errbuf.String()), zap.String("name", record[3]), zap.String("url", record[i]))
 							log.Println("failed to run command: ", err)
 							return
 						}
@@ -122,4 +128,8 @@ func (d *Downloader) Run(timeout time.Duration) error {
 			}
 		})
 	}
+}
+
+func (d *Downloader) getName() string {
+	return d.path + "/%(title)s.%(id)s." + fmt.Sprint(d.count.Inc()) + ".%(ext)s"
 }
