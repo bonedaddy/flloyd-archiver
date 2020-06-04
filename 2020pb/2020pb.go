@@ -49,7 +49,7 @@ func New(logFile, path string, concurrency int) *Downloader {
 }
 
 // Run starts the download process
-func (d *Downloader) Run() error {
+func (d *Downloader) Run(timeout time.Duration) error {
 	resp, err := http.Get(URL)
 	if err != nil {
 		return err
@@ -104,8 +104,9 @@ func (d *Downloader) Run() error {
 							log.Println("failed to run command: ", err)
 							return
 						}
-					case <-time.After(time.Minute * 3):
+					case <-time.After(timeout):
 						// TODO(bonedaddy): decide if we need this
+						// it's menat to prevent any possible issue with cmd having a nil process when this is called
 						defer recover()
 						// kill the process
 						if cmd.Process != nil {
