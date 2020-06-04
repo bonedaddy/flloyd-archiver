@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -9,7 +10,9 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/panjf2000/ants/v2"
 	"go.bobheadxi.dev/zapx/zapx"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
@@ -22,10 +25,13 @@ const (
 type Downloader struct {
 	path   string
 	logger *zap.Logger
+	// enables running concurrent downloads
+	wp    *ants.Pool
+	count *atomic.Int64
 }
 
 // New returns a new downloader
-func New(logFile, path string) *Downloader {
+func New(logFile, path string, concurrency int) *Downloader {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.Mkdir(path, os.FileMode(0775)); err != nil {
 			panic(err)
@@ -35,7 +41,11 @@ func New(logFile, path string) *Downloader {
 	if err != nil {
 		panic(err)
 	}
-	return &Downloader{path, logger}
+	wp, err := ants.NewPool(concurrency)
+	if err != nil {
+		panic(err)
+	}
+	return &Downloader{path, logger, wp, atomic.NewInt64(0)}
 }
 
 // Run starts the download process
@@ -51,8 +61,6 @@ func (d *Downloader) Run() error {
 	state,edit_at,city,name,date,date_text,Link 1,Link 2,Link 3,Link 4,Link 5,Link 6,Link 7,Link 8
 	*/
 	i := 0
-	// if any downloads fail, we will try them again at the end
-	var tryAgain [][]string
 	for {
 		record, err := reader.Read()
 		if err != nil && err != io.EOF {
@@ -70,42 +78,45 @@ func (d *Downloader) Run() error {
 		if len(record) < 7 {
 			continue
 		}
-		d.logger.Info("downloading new video(s) set", zap.String("video", record[3]))
-		max := len(record) - 1
-		// TODO(bonedaddy): enable handling of failed video retry later
-		var set []string
-		for i := 6; i < max; i++ {
-			// no data in row so skip
-			if record[i] == "" {
-				continue
-			}
-			d.logger.Info("starting new downloading", zap.String("video", record[3]), zap.String("link", record[i]))
-			download := func() {
-				cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s", record[i])
-				// if this fails, then it means youtube-dl wasn't able to process the video
-				if err := cmd.Start(); err != nil {
-					set = append(set, record[i])
-					d.logger.Error("failed to start command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
-					return
+		d.wp.Submit(func() {
+			d.logger.Info("downloading new video(s) set", zap.String("video", record[3]))
+			max := len(record) - 1
+			for i := 6; i < max; i++ {
+				// no data in row so skip
+				if record[i] == "" {
+					continue
 				}
-				done := make(chan error)
-				go func() { done <- cmd.Wait() }()
-				select {
-				case err := <-done:
-					if err != nil {
-						set = append(set, record[i])
-						d.logger.Error("failed to run command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
-						log.Println("failed to run command: ", err)
+				d.logger.Info("starting new downloading", zap.String("video", record[3]), zap.String("link", record[i]))
+				download := func() {
+					// use an atomically increasing counter to prevent any possible chacne of filename conflics when running many concurrent downloaders
+					cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s-"+fmt.Sprint(d.count.Inc()), record[i])
+					// if this fails, then it means youtube-dl wasn't able to process the video
+					if err := cmd.Start(); err != nil {
+						d.logger.Error("failed to start command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
 						return
 					}
-				case <-time.After(time.Minute * 3):
-					set = append(set, record[i])
-					d.logger.Warn("download stalled, skipping", zap.String("video", record[3]), zap.String("link", record[i]))
-					return
+					done := make(chan error)
+					go func() { done <- cmd.Wait() }()
+					select {
+					case err := <-done:
+						if err != nil {
+							d.logger.Error("failed to run command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
+							log.Println("failed to run command: ", err)
+							return
+						}
+					case <-time.After(time.Minute * 3):
+						// TODO(bonedaddy): decide if we need this
+						defer recover()
+						// kill the process
+						if cmd.Process != nil {
+							cmd.Process.Kill()
+						}
+						d.logger.Warn("download stalled, skipping", zap.String("video", record[3]), zap.String("link", record[i]))
+						return
+					}
 				}
+				download()
 			}
-			download()
-		}
-		tryAgain = append(tryAgain, set)
+		})
 	}
 }

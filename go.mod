@@ -13,6 +13,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.5.6 // indirect
 	github.com/multiformats/go-multiaddr-net v0.1.5 // indirect
 	github.com/multiformats/go-multibase v0.0.2 // indirect
+	github.com/panjf2000/ants/v2 v2.4.1
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/youtube-videos/go-youtube-dl v0.0.0-20170720135957-9ca8bafc4268
 	go.bobheadxi.dev/zapx/zapx v0.6.8

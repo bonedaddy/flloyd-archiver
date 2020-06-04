@@ -56,7 +56,7 @@ func main() {
 			Name:  "2020pb-archiver",
 			Usage: "pulls the CSV from https://github.com/2020PB/police-brutality/tree/data_build",
 			Action: func(c *cli.Context) error {
-				dl := downloader.New(c.String("dir"), c.String("log.file"))
+				dl := downloader.New(c.String("log.file"), c.String("dir"), c.Int("concurrency"))
 				return dl.Run()
 			},
 			Flags: []cli.Flag{
@@ -64,6 +64,11 @@ func main() {
 					Name:  "dir",
 					Usage: "directory to save youtube videos to",
 					Value: "videos",
+				},
+				&cli.IntFlag{
+					Name:  "concurrency",
+					Value: 1,
+					Usage: "enables concurrent download of videos",
 				},
 			},
 		},
