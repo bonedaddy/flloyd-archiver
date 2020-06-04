@@ -2,27 +2,30 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/exec"
 	"time"
 
-	"go.bobheadxi.dev/zapx/zapx"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-
+	"github.com/BrianAllred/goydl"
 	ldb "github.com/RTradeLtd/go-datastores/leveldb"
 	ipfsapi "github.com/RTradeLtd/go-ipfs-api/v3"
 	"github.com/go-chi/chi"
 	"github.com/ipfs/go-datastore"
 	"github.com/urfave/cli/v2"
+	"go.bobheadxi.dev/zapx/zapx"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
 )
 
 var (
 	count = atomic.NewInt64(0)
+	url   = "https://raw.githubusercontent.com/2020PB/police-brutality/data_build/all-locations.csv"
 )
 
 func main() {
@@ -51,6 +54,65 @@ func main() {
 		},
 	}
 	app.Commands = cli.Commands{
+		&cli.Command{
+			Name:  "2020pb-archiver",
+			Usage: "pulls the CSV from https://github.com/2020PB/police-brutality/tree/data_build",
+			Action: func(c *cli.Context) error {
+				if _, err := os.Stat(c.String("dir")); os.IsNotExist(err) {
+					if err := os.Mkdir(c.String("dir"), os.FileMode(0775)); err != nil {
+						return err
+					}
+				}
+				resp, err := http.Get(url)
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+				reader := csv.NewReader(resp.Body)
+				ytdl := goydl.NewYoutubeDl()
+				_ = ytdl
+				// opts := goydl.NewOptions()
+				// opts.Output.Value = c.String("dir")
+				// ytdl.Options = opts
+				// go io.Copy(os.Stdout, ytdl.Stdout)
+				// go io.Copy(os.Stderr, ytdl.Stderr)
+				/* rows:
+				0    , 1     , 2  , 3  , 4  , 5       , 6    , 7    ,  8   , 9    , 10   , 11  ,  12   , 13
+				state,edit_at,city,name,date,date_text,Link 1,Link 2,Link 3,Link 4,Link 5,Link 6,Link 7,Link 8
+				*/
+				i := 0
+				for {
+					record, err := reader.Read()
+					if err != nil {
+						return err
+					}
+					// skip the first row which are the headers
+					if i == 0 {
+						i++
+						continue
+					}
+					// this row contains no video
+					if len(record) < 7 {
+						continue
+					}
+					fmt.Println("downloading video: ", record[3])
+					max := len(record) - 1
+					for i := 6; i < max; i++ {
+						fmt.Println("downloading link: ", record[i])
+						cmd := exec.Command("youtube-dl", "-o", c.String("dir")+"/%(title)s.%(ext)s", record[i])
+						cmd.Run()
+					}
+				}
+				return nil
+			},
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:  "dir",
+					Usage: "directory to save youtube videos to",
+					Value: "videos",
+				},
+			},
+		},
 		&cli.Command{
 			Name: "run",
 			Action: func(c *cli.Context) error {

@@ -1,4 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+github.com/BrianAllred/goydl v0.0.0-20171128220148-015c9f2f47fc h1:xuMCRW5RWNoM2gyLlugPiiALtxpgku1PHNxQDt7UJ/Y=
+github.com/BrianAllred/goydl v0.0.0-20171128220148-015c9f2f47fc/go.mod h1:hpSBK67Uduw/SGy6bObP8YrAZjcw0WR+gV/KTl9o2Lc=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DataDog/zstd v1.4.1/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
@@ -190,6 +192,8 @@ github.com/urfave/cli/v2 v2.2.0/go.mod h1:SE9GqnLQmjVa0iPEY0f1w3ygNIYcIJ0OKPMoW2
 github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c h1:GGsyl0dZ2jJgVT+VvWBf/cNijrHRhkrTjkmp5wg7li0=
 github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c/go.mod h1:xxcJeBb7SIUl/Wzkz1eVKJE/CB34YNrqX2TQI6jY9zs=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
+github.com/youtube-videos/go-youtube-dl v0.0.0-20170720135957-9ca8bafc4268 h1:NEI7XxZCWNGwA+HgxpGqYA1NsLqdx7lZiDxPFKlmxLo=
+github.com/youtube-videos/go-youtube-dl v0.0.0-20170720135957-9ca8bafc4268/go.mod h1:13eVPxVGToxoH6uKkHwoFGbtF0tp2ZonQ9dRJFnI1iE=
 go.bobheadxi.dev/zapx v0.6.4 h1:yDJn6w2pxm1oSyR62ozvPxYKcpHgnffq3nTOufVI/LA=
 go.bobheadxi.dev/zapx/util v0.6.4/go.mod h1:njyKdHJsVjw9ZAJOK0EHFBG/HHRa0OE1Psxzk4R4su0=
 go.bobheadxi.dev/zapx/zapx v0.6.8 h1:Ivso94M9fedXmhYlNJPvCIEs/39v5JcgVd3E3hfsG9A=

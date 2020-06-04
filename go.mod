@@ -3,6 +3,7 @@ module github.com/bonedaddy/archiver
 go 1.14
 
 require (
+	github.com/BrianAllred/goydl v0.0.0-20171128220148-015c9f2f47fc
 	github.com/RTradeLtd/go-datastores v1.0.0
 	github.com/RTradeLtd/go-ipfs-api/v3 v3.0.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -13,6 +14,7 @@ require (
 	github.com/multiformats/go-multiaddr-net v0.1.5 // indirect
 	github.com/multiformats/go-multibase v0.0.2 // indirect
 	github.com/urfave/cli/v2 v2.2.0
+	github.com/youtube-videos/go-youtube-dl v0.0.0-20170720135957-9ca8bafc4268
 	go.bobheadxi.dev/zapx/zapx v0.6.8
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.15.0
