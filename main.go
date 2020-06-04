@@ -56,7 +56,7 @@ func main() {
 			Name:  "2020pb-archiver",
 			Usage: "pulls the CSV from https://github.com/2020PB/police-brutality/tree/data_build",
 			Action: func(c *cli.Context) error {
-				dl := downloader.New(c.String("dir"))
+				dl := downloader.New(c.String("dir"), c.String("log.file"))
 				return dl.Run()
 			},
 			Flags: []cli.Flag{
