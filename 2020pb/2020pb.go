@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"go.bobheadxi.dev/zapx/zapx"
@@ -52,6 +51,8 @@ func (d *Downloader) Run() error {
 	state,edit_at,city,name,date,date_text,Link 1,Link 2,Link 3,Link 4,Link 5,Link 6,Link 7,Link 8
 	*/
 	i := 0
+	// if any downloads fail, we will try them again at the end
+	var tryAgain [][]string
 	for {
 		record, err := reader.Read()
 		if err != nil && err != io.EOF {
@@ -71,16 +72,19 @@ func (d *Downloader) Run() error {
 		}
 		d.logger.Info("downloading new video(s) set", zap.String("video", record[3]))
 		max := len(record) - 1
+		// TODO(bonedaddy): enable handling of failed video retry later
+		var set []string
 		for i := 6; i < max; i++ {
 			// no data in row so skip
 			if record[i] == "" {
 				continue
 			}
 			d.logger.Info("starting new downloading", zap.String("video", record[3]), zap.String("link", record[i]))
-			downloadYT := func() {
+			download := func() {
 				cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s", record[i])
 				// if this fails, then it means youtube-dl wasn't able to process the video
 				if err := cmd.Start(); err != nil {
+					set = append(set, record[i])
 					d.logger.Error("failed to start command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
 					return
 				}
@@ -89,22 +93,19 @@ func (d *Downloader) Run() error {
 				select {
 				case err := <-done:
 					if err != nil {
+						set = append(set, record[i])
 						d.logger.Error("failed to run command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
 						log.Println("failed to run command: ", err)
 						return
 					}
 				case <-time.After(time.Minute * 3):
+					set = append(set, record[i])
 					d.logger.Warn("download stalled, skipping", zap.String("video", record[3]), zap.String("link", record[i]))
 					return
 				}
 			}
-			if strings.Contains(record[i], "instagram") {
-				// TODO(bonedaddy): handle instagram URLs
-				// if insta download fails, try youtube-dl
-				downloadYT()
-			} else {
-				downloadYT()
-			}
+			download()
 		}
+		tryAgain = append(tryAgain, set)
 	}
 }
