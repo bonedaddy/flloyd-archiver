@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -87,8 +88,10 @@ func (d *Downloader) Run(timeout time.Duration) error {
 				}
 				d.logger.Info("downloading video", zap.String("video", record[3]), zap.String("link", record[i]))
 				download := func() {
+					var errbuf bytes.Buffer
 					// use an atomically increasing counter to prevent any possible chacne of filename conflics when running many concurrent downloaders
 					cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s-"+fmt.Sprint(d.count.Inc()), record[i])
+					cmd.Stderr = &errbuf
 					// if this fails, then it means youtube-dl wasn't able to process the video
 					if err := cmd.Start(); err != nil {
 						d.logger.Error("failed to start command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
@@ -99,7 +102,7 @@ func (d *Downloader) Run(timeout time.Duration) error {
 					select {
 					case err := <-done:
 						if err != nil {
-							d.logger.Error("failed to run command", zap.Error(err), zap.String("video", record[3]), zap.String("link", record[i]))
+							d.logger.Error("failed to run command", zap.Error(err), zap.String("command.error", errbuf.String()), zap.String("video", record[3]), zap.String("link", record[i]))
 							log.Println("failed to run command: ", err)
 							return
 						}
