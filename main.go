@@ -57,7 +57,7 @@ func main() {
 			Usage: "pulls the CSV from https://github.com/2020PB/police-brutality/tree/data_build",
 			Action: func(c *cli.Context) error {
 				dl := downloader.New(c.String("log.file"), c.String("dir"), c.Int("concurrency"))
-				return dl.Run(c.Duration("timeout"))
+				return dl.Run(c.Duration("timeout"), c.Int("max"))
 			},
 			Flags: []cli.Flag{
 				&cli.StringFlag{
@@ -69,6 +69,10 @@ func main() {
 					Name:  "concurrency",
 					Value: 1,
 					Usage: "enables concurrent download of videos",
+				},
+				&cli.IntFlag{
+					Name:  "max",
+					Usage: "max videos to download",
 				},
 				&cli.DurationFlag{
 					Name:  "timeout",
