@@ -115,20 +115,21 @@ func (d *Downloader) Run(timeout time.Duration, maxDownloads int) error {
 				count := d.count.Inc()
 				d.logger.Info("downloading video", zap.String("name", record[3]), zap.String("url", record[ii]))
 				download := func() {
-					mux.Lock()
-					results = append(results, struct {
-						name  string
-						link  string
-						count int64
-					}{
-						name:  record[3],
-						link:  record[ii],
-						count: count,
-					})
-					mux.Unlock()
 					cmd := exec.Command("youtube-dl", "-o", d.getName(count), record[ii])
 					if err := d.runCommand(cmd, timeout); err != nil {
 						d.logger.Error("failed to run command", zap.Error(err), zap.String("name", record[3]), zap.String("url", record[ii]))
+					} else {
+						mux.Lock()
+						results = append(results, struct {
+							name  string
+							link  string
+							count int64
+						}{
+							name:  record[3],
+							link:  record[ii],
+							count: count,
+						})
+						mux.Unlock()
 					}
 				}
 				download()
