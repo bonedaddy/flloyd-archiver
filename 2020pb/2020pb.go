@@ -51,29 +51,29 @@ func New(logFile, path string, concurrency int) *Downloader {
 }
 
 // Run starts the download process
-func (d *Downloader) Run(timeout time.Duration, max int) error {
+func (d *Downloader) Run(timeout time.Duration, maxDownloads int) error {
 	resp, err := http.Get(URL)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	reader := csv.NewReader(resp.Body)
-	/* rows:
+	/* rows of csv file for easy reference
 	0    , 1     , 2  , 3  , 4  , 5       , 6    , 7    ,  8   , 9    , 10   , 11  ,  12   , 13
 	state,edit_at,city,name,date,date_text,Link 1,Link 2,Link 3,Link 4,Link 5,Link 6,Link 7,Link 8
 	*/
-	// maps the video name + link to it's count
 	var (
 		results []struct {
 			name  string
 			link  string
 			count int64
 		}
-		mux sync.Mutex
+		mux = &sync.Mutex{}
+		wg  = &sync.WaitGroup{}
 		i   = 0
 	)
 	for {
-		if max != 0 && i >= max {
+		if maxDownloads != 0 && i >= maxDownloads {
 			break
 		}
 		// read the next record
@@ -96,7 +96,9 @@ func (d *Downloader) Run(timeout time.Duration, max int) error {
 		}
 		// var nameToID = make(map[string]string)
 		// submit to the worker pool, allowing concurrently downloading multiple videos
+		wg.Add(1)
 		d.wp.Submit(func() {
+			defer wg.Done()
 			max := len(record) - 1
 			for i := 6; i < max; i++ {
 				// this column is empty, and has no data
@@ -154,14 +156,19 @@ func (d *Downloader) Run(timeout time.Duration, max int) error {
 			}
 		})
 	}
-	// TODO(bonedaddy): write name+link -> count mapping
-	fh, err := os.Create("name_mapping.txt")
+	wg.Wait()
+	fh, err := os.Create("name_mapping.csv")
 	if err != nil {
 		return err
 	}
+	writer := csv.NewWriter(fh)
+	writer.Write([]string{"name", "link", "count"})
+	mux.Lock()
 	for _, v := range results {
-		fh.WriteString(fmt.Sprintf("name: %s\tlink: %s\tcount: %v\n", v.name, v.link, v.count))
+		writer.Write([]string{v.name, v.link, fmt.Sprint(v.count)})
 	}
+	mux.Unlock()
+	writer.Flush()
 	return fh.Close()
 }
 
