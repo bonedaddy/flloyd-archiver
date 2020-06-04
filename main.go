@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -98,9 +99,15 @@ func main() {
 					fmt.Println("downloading video: ", record[3])
 					max := len(record) - 1
 					for i := 6; i < max; i++ {
+						// empty link
+						if record[i] == "" {
+							continue
+						}
 						fmt.Println("downloading link: ", record[i])
 						cmd := exec.Command("youtube-dl", "-o", c.String("dir")+"/%(title)s.%(ext)s", record[i])
-						cmd.Run()
+						if err := cmd.Run(); err != nil {
+							log.Println("WARN: run failed: ", err)
+						}
 					}
 				}
 				return nil
