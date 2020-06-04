@@ -79,14 +79,13 @@ func (d *Downloader) Run(timeout time.Duration) error {
 			continue
 		}
 		d.wp.Submit(func() {
-			d.logger.Info("downloading new video(s) set", zap.String("video", record[3]))
 			max := len(record) - 1
 			for i := 6; i < max; i++ {
 				// no data in row so skip
 				if record[i] == "" {
 					continue
 				}
-				d.logger.Info("starting new downloading", zap.String("video", record[3]), zap.String("link", record[i]))
+				d.logger.Info("downloading video", zap.String("video", record[3]), zap.String("link", record[i]))
 				download := func() {
 					// use an atomically increasing counter to prevent any possible chacne of filename conflics when running many concurrent downloaders
 					cmd := exec.Command("youtube-dl", "-o", d.path+"/%(title)s.%(ext)s-"+fmt.Sprint(d.count.Inc()), record[i])
